@@ -15,8 +15,7 @@ from langchain_core.documents import Document
 from langchain_core.document_loaders import BaseLoader
 from PIL import Image
 from qdrant_client import QdrantClient
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from app.core.config import get_settings
 from app.models.schemas import IngestionRequest, IngestionResponse
@@ -28,21 +27,21 @@ logger = logging.getLogger(__name__)
 _SUPPORTED_EXTENSIONS: set[str] = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".png", ".jpg", ".jpeg"}
 
 
-_engine: Engine | None = None
+_engine: AsyncEngine | None = None
 
 
-def get_engine() -> Engine:
+def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
         settings = get_settings()
-        _engine = create_engine(
+        _engine = create_async_engine(
             settings.DATABASE_URL,
             pool_size=5,
             max_overflow=10,
             pool_pre_ping=True,
             pool_recycle=3600,
         )
-        logger.info("Created SQLAlchemy engine for %s", settings.DATABASE_URL)
+        logger.info("Created async SQLAlchemy engine for %s", settings.DATABASE_URL)
     return _engine
 
 

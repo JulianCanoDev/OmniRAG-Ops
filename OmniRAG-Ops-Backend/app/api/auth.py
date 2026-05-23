@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import select
 
 from app.core.security import (
     create_access_token,
@@ -18,8 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["auth"])
 
 
-def _get_user_session():
-    """Convenience: get a fresh DB session bound to the shared engine."""
+async def _get_user_session():
     from app.services.ingestion import get_engine
 
     engine = get_engine()
@@ -33,9 +33,11 @@ def _get_user_session():
     summary="Register a new user",
 )
 async def register(payload: UserCreate) -> UserResponse:
-    session = _get_user_session()
+    session = await _get_user_session()
     try:
-        existing = session.query(User).filter(User.email == payload.email).first()
+        stmt = select(User).where(User.email == payload.email)
+        result = await session.execute(stmt)
+        existing = result.scalar_one_or_none()
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -46,12 +48,12 @@ async def register(payload: UserCreate) -> UserResponse:
             hashed_password=hash_password(payload.password),
         )
         session.add(user)
-        session.commit()
-        session.refresh(user)
+        await session.commit()
+        await session.refresh(user)
         logger.info("Registered user '%s' (admin=%s)", user.email, user.is_admin)
         return UserResponse.model_validate(user)
     finally:
-        session.close()
+        await session.close()
 
 
 @router.post(
@@ -62,13 +64,11 @@ async def register(payload: UserCreate) -> UserResponse:
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> Token:
-    session = _get_user_session()
+    session = await _get_user_session()
     try:
-        user = (
-            session.query(User)
-            .filter(User.email == form_data.username)
-            .first()
-        )
+        stmt = select(User).where(User.email == form_data.username)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
         if not user or not verify_password(form_data.password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -83,4 +83,4 @@ async def login(
         token = create_access_token(data={"sub": user.email})
         return Token(access_token=token)
     finally:
-        session.close()
+        await session.close()

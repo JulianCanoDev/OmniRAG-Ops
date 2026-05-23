@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.models.user import User
@@ -45,7 +46,7 @@ def decode_access_token(token: str) -> dict:
         )
 
 
-def get_current_user(
+async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> User:
     payload = decode_access_token(credentials.credentials)
@@ -60,7 +61,9 @@ def get_current_user(
     engine = get_engine()
     session = User._session(engine)
     try:
-        user = session.query(User).filter(User.email == email).first()
+        stmt = select(User).where(User.email == email)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
         if user is None or not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -68,4 +71,4 @@ def get_current_user(
             )
         return user
     finally:
-        session.close()
+        await session.close()

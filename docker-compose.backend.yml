@@ -1,0 +1,32 @@
+services:
+  api:
+    build:
+      context: ./OmniRAG-Ops-Backend
+      dockerfile: Dockerfile
+    container_name: omnirg-api
+    ports:
+      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
+    env_file:
+      - ./OmniRAG-Ops-Backend/.env
+    environment:
+      - PORT=${APP_PORT:-8000}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, os; port=os.environ.get('PORT','8000'); urllib.request.urlopen(f'http://localhost:{port}/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  default:
+    external: true
+    name: dokploy-network

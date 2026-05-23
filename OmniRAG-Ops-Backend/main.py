@@ -42,7 +42,8 @@ async def on_startup() -> None:
     settings = get_settings()
 
     engine = get_engine()
-    Base.metadata.create_all(bind=engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     logger.info("Database tables created / verified")
 
     logger.info("OmniRAG-Ops startup complete — multi-format ingestion ready")

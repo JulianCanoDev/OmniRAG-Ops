@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import Boolean, Column, DateTime, String
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
@@ -15,7 +16,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(
-        UUID(as_uuid=True),
+        PG_UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
@@ -30,8 +31,8 @@ class User(Base):
     )
 
     @staticmethod
-    def _session(engine):
-        return sessionmaker(bind=engine)()
+    def _session(engine) -> AsyncSession:
+        return async_sessionmaker(bind=engine, class_=AsyncSession)()
 
 
 class UserCreate(BaseModel):

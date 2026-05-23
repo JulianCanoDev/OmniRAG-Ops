@@ -5,6 +5,7 @@ from typing import Any
 
 from langchain.indexes import SQLRecordManager
 from qdrant_client import QdrantClient, models
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.core.config import get_settings
 from app.services.vector_service import get_qdrant_client
@@ -41,7 +42,7 @@ class CollectionService:
         return {"conflict": False, "name": name}
 
     @staticmethod
-    def delete(name: str) -> int:
+    async def delete(name: str) -> int:
         client = get_qdrant_client()
 
         collections = client.get_collections().collections
@@ -55,14 +56,14 @@ class CollectionService:
         settings = get_settings()
         try:
             from app.services.ingestion import get_engine
-            engine = get_engine()
+            engine: AsyncEngine = get_engine()
             record_manager = SQLRecordManager(
                 namespace=settings.RECORD_MANAGER_NAMESPACE,
-                engine=engine,
+                engine=engine.sync_engine,
             )
             record_manager.create_schema()
             record_manager.delete_session(settings.RECORD_MANAGER_NAMESPACE)
-            logger.info("Cleared SQLRecordManager namespace '%s'", namespace)
+            logger.info("Cleared SQLRecordManager namespace '%s'", name)
         except Exception:
             logger.exception("Failed to clear RecordManager for '%s'", name)
 

@@ -230,7 +230,7 @@ async def delete_collection(
     name: str,
     _user=Depends(get_current_user),
 ) -> dict[str, Any]:
-    deleted = CollectionService.delete(name)
+    deleted = await CollectionService.delete(name)
     if not deleted:
         raise HTTPException(
             status_code=404,

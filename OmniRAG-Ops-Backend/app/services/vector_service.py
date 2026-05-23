@@ -9,17 +9,11 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.indexes import SQLRecordManager, index
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# OmniRAG-Ops is a stateless middleware.  It never hosts, embeds, or
-# installs a local vector database.  All Qdrant operations go through the
-# remote client below, which expects an already-running Qdrant service
-# reachable via QDRANT_URL (cloud, VPS, Docker network, etc.).
-# ---------------------------------------------------------------------------
 
 
 def _get_embeddings() -> GoogleGenerativeAIEmbeddings:
@@ -66,10 +60,10 @@ def _ensure_collection_exists(client: QdrantClient) -> None:
 def get_record_manager() -> SQLRecordManager:
     settings = get_settings()
     from app.services.ingestion import get_engine
-    engine = get_engine()
+    engine: AsyncEngine = get_engine()
     record_manager = SQLRecordManager(
         namespace=settings.RECORD_MANAGER_NAMESPACE,
-        engine=engine,
+        engine=engine.sync_engine,
     )
     record_manager.create_schema()
     return record_manager

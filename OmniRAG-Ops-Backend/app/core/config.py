@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
     LOG_LEVEL: str = "info"
 
-    DATABASE_URL: str = "postgresql+psycopg2://omnirg:omnirg@db:5432/omnirg"
+    DATABASE_URL: str = "postgresql+asyncpg://omnirg:omnirg@db:5432/omnirg"
     RECORD_MANAGER_NAMESPACE: str = "omnirag/upsert_records"
 
     SECRET_KEY: str = "change-me-in-production"
